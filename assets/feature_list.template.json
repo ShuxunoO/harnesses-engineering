@@ -1,0 +1,64 @@
+[
+  {
+    "id": "feat-001",
+    "category": "functional",
+    "priority": 1,
+    "description": "User can register a new account",
+    "steps": [
+      "Navigate to /signup",
+      "Enter a valid email and a password (>= 8 characters)",
+      "Click the 'Create Account' button",
+      "Confirm the page redirects to /welcome",
+      "Confirm a new row exists in the users table",
+      "Confirm a verification email is received (check mailcatcher or mock)"
+    ],
+    "passes": false,
+    "last_verified_commit": null,
+    "notes": "The minimum password length may change later; that does not affect this feature's steps."
+  },
+  {
+    "id": "feat-002",
+    "category": "functional",
+    "priority": 2,
+    "description": "User can log in",
+    "steps": [
+      "Precondition: a registered user exists (use feat-001 flow or a fixture)",
+      "Navigate to /login",
+      "Enter valid credentials and click 'Sign In'",
+      "Confirm the page redirects to /dashboard",
+      "Confirm the cookie / token is set",
+      "Refresh the page and confirm the user remains logged in"
+    ],
+    "passes": false,
+    "last_verified_commit": null
+  },
+  {
+    "id": "feat-003",
+    "category": "ui",
+    "priority": 3,
+    "description": "Login page renders correctly on mobile",
+    "steps": [
+      "Set Playwright viewport to 375x667 (iPhone SE)",
+      "Take a screenshot of /login",
+      "Confirm the form is centered, the button is not occluded, and text does not overflow",
+      "Repeat with viewport 1440x900",
+      "Compare against baseline screenshots if they exist"
+    ],
+    "passes": false,
+    "last_verified_commit": null,
+    "notes": "Visual task — use screenshots and multimodal review."
+  },
+  {
+    "id": "feat-004",
+    "category": "non-functional",
+    "priority": 4,
+    "description": "Login endpoint p95 latency under 200ms",
+    "steps": [
+      "Run hey/wrk against /api/login with 500 concurrent requests",
+      "Check p95 latency",
+      "If above 200ms, profile to find the bottleneck"
+    ],
+    "passes": false,
+    "last_verified_commit": null
+  }
+]

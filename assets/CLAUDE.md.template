@@ -1,0 +1,111 @@
+# {{PROJECT_NAME}} — CLAUDE.md
+
+> Loaded by the harness at the start of every session. This file defines how the coding agent works.
+> Replace the `{{...}}` placeholders during initializer setup.
+
+---
+
+## Project context
+
+{{ONE_PARAGRAPH_PROJECT_DESCRIPTION}}
+
+- Target users: {{TARGET_USERS}}
+- Stack: {{TECH_STACK}}
+- Repo layout: {{REPO_LAYOUT_BRIEF}}
+
+---
+
+## Session-start protocol (run these first, every session)
+
+These six steps are the only basis on which a new session can pick up where the previous one left off. Do not skip them.
+
+```
+Step 1.  pwd                                          # confirm working directory
+Step 2.  git log --oneline -20                        # what was done recently
+Step 3.  cat progress.txt | tail -100                 # narrative state
+Step 4.  jq '[.[] | select(.passes==false)] | sort_by(.priority) | .[0]' feature_list.json
+                                                      # highest-priority unfinished feature
+Step 5.  ./init.sh                                    # bring up the dev environment
+Step 6.  ./run_e2e.sh --smoke                         # baseline E2E smoke test
+```
+
+**Hard rule.** If step 6 fails, do **not** keep editing. Either report the broken environment or `git reset --hard` to the last green commit.
+
+---
+
+## Working loop (per feature)
+
+1. Read the feature's `steps` from `feature_list.json`.
+2. Implement.
+3. Read the `PostToolUse` hook output (lint / type-check fires automatically).
+4. Run the `steps` yourself with {{E2E_TOOL: Playwright/curl/pytest}}.
+5. All pass → flip `passes: true`, write `last_verified_commit` (current HEAD).
+6. Otherwise → revise and return to step 3.
+7. After several attempts without progress, do not force it. Write the blocker into `progress.txt` and exit for human review.
+
+---
+
+## Wrap-up (after a feature passes)
+
+```
+1. git add .
+2. git commit -m "feat({{AREA}}): <what>. why: <reason>"
+3. Append to progress.txt:
+   ## Session {{N}} ({{DATE}})
+   - Implemented: <feature id + summary>
+   - Approach: <why this way; any tradeoffs>
+   - Next: <what should come next>
+4. Exit. Do not start another feature in this session.
+```
+
+The exit rule exists because every additional uncommitted feature increases the cost of recovery if something goes wrong. **One feature per session is a hard limit.**
+
+---
+
+## Contracts (you cannot edit these)
+
+- `feature_list.json`: `id`, `description`, `steps`, `category` are immutable. Only `passes` and `last_verified_commit` can change. From the source article: "It is unacceptable to remove or edit tests because this could lead to missing or buggy functionality."
+- `tests/`: deleting any existing test goes through `AskUserQuestion`.
+- `init.sh`: the existing logic is stable. Add new steps for new dependencies; do not change semantics of existing ones.
+- This file.
+
+---
+
+## Tool preferences
+
+In order:
+
+1. **Search** — `Grep` and `Glob` are the default. Don't ask for "smarter search"; fail with `grep` first.
+2. **Take action** — prefer a dedicated tool when one exists; otherwise `Bash`. Bash is the most flexible fallback.
+3. **Heavy reading** (scanning many files) — dispatch `Agent` with the `code-reviewer` subagent and consume only its summary.
+4. **UI / visual verification** — Playwright MCP screenshots, then read them multimodally.
+5. **Irreversible actions** (delete data, push, payment) — route through `AskUserQuestion` for human confirmation.
+
+---
+
+## Verification priority
+
+Use this order to answer "am I done?":
+
+1. **Rules-based** — lint / type-check / unit-test exit codes. Did they pass?
+2. **Visual** — UI work: did the screenshots look right?
+3. **E2E** — did all `steps` pass?
+4. **LLM-as-judge** — only for tone / style / subjective dimensions.
+
+If you're tempted to say "should be working," stop. Look at which of the above produced **actual output**. **No test output = not done.** Anthropic names this "premature victory declaration" as the primary failure mode for long-running agents.
+
+---
+
+## Project-specific conventions
+
+(Initializer fills in:
+
+- Naming conventions
+- Banned APIs
+- Security requirements
+- Database schema rules
+- Anything else)
+
+---
+
+> Bottom line: your goal is not to write the most code. It is to leave the project closer to "every entry in `feature_list.json` has `passes: true`" than when the session started. That is the only metric.

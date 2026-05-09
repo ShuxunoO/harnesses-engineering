@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# {{PROJECT_NAME}} — one-shot dev environment bringup
+#
+# Design rules:
+#   - Idempotent: running it again must not break anything.
+#   - Fast: when the environment is already up, exit within a few seconds.
+#   - Self-checking: do not exit silently on failure.
+#   - Non-interactive: never prompt — the coding agent cannot answer.
+#
+# Exit codes:
+#   0   — environment ready
+#   !=0 — any step failed; details on stderr
+
+set -euo pipefail
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_ROOT"
+
+log() { echo "[init.sh] $*" >&2; }
+
+# === 1. Install dependencies (idempotent) ===
+log "Checking dependencies..."
+
+if [ -f package.json ]; then
+  if [ ! -d node_modules ] || [ package.json -nt node_modules ]; then
+    log "Installing npm packages..."
+    pnpm install --frozen-lockfile  # or: npm ci / yarn install
+  fi
+fi
+
+if [ -f requirements.txt ]; then
+  if [ ! -d .venv ]; then
+    python -m venv .venv
+  fi
+  source .venv/bin/activate
+  pip install -q -r requirements.txt
+fi
+
+# === 2. Start dependent services (idempotent) ===
+log "Starting dependent services..."
+
+# Example: Postgres / Redis via docker compose
+if [ -f docker-compose.yml ]; then
+  docker compose up -d
+  log "Waiting for services to be healthy..."
+  timeout 30 sh -c 'until docker compose ps | grep -E "healthy|running" > /dev/null; do sleep 1; done'
+fi
+
+# === 3. Run migrations / seed data (idempotent) ===
+log "Running migrations..."
+# {{MIGRATION_COMMAND e.g. pnpm prisma migrate deploy}}
+
+# === 4. Start dev server (background, non-blocking) ===
+log "Starting dev server in background..."
+if ! pgrep -f "{{DEV_SERVER_MARKER e.g. next dev}}" > /dev/null; then
+  nohup {{DEV_SERVER_COMMAND e.g. pnpm dev}} > /tmp/devserver.log 2>&1 &
+  echo $! > /tmp/devserver.pid
+  log "Waiting for dev server..."
+  timeout 30 sh -c 'until curl -sf http://localhost:{{PORT}}/health > /dev/null; do sleep 1; done'
+fi
+
+# === 5. Health check ===
+log "Running health checks..."
+curl -sf http://localhost:{{PORT}}/health > /dev/null || {
+  log "ERROR: dev server health check failed"
+  exit 1
+}
+
+log "Environment ready."

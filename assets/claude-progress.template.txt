@@ -1,0 +1,53 @@
+# {{PROJECT_NAME}} — Progress Log
+
+> The narrative relay between sessions. The coding agent appends a new section at the
+> end of every session. Format is loose — what matters is *why* and *what's next*, not
+> a flat to-do recap.
+
+---
+
+## Session 0: Initialized ({{INIT_DATE}})
+
+Created by the initializer agent.
+
+**Project goal**: {{ONE_PARAGRAPH_GOAL}}
+
+**Scaffolding in place**:
+- `init.sh` — one-shot dev environment bringup ({{STACK_BRIEF}})
+- `feature_list.json` — split into {{N}} atomic features
+- `run_e2e.sh` — E2E entry point (`--smoke` for quick checks; no args runs the full suite)
+- First git commit: project skeleton
+
+**Baseline E2E**: passing.
+
+**Next**: pick the priority-1 feature from `feature_list.json` (likely `feat-001`).
+
+---
+
+<!--
+Format for subsequent sessions:
+
+## Session N ({{DATE}})
+
+**Implemented**: feat-XXX (one-line summary)
+
+**Approach**: why this way. If multiple options were on the table, briefly say which
+            and why. Example: "Used multer for upload — did not write a multipart
+            parser; the standard library covers it and avoids edge-case bugs."
+
+**Surprises / blockers**:
+- Issues encountered and how they were resolved
+- TODOs or known limitations left in place
+
+**Verified**:
+- E2E steps 1-6 all pass
+- Lint clean
+- Screenshots (if any) at /tmp/screenshots/feat-XXX-*.png
+
+**Commit**: <git rev-parse HEAD>
+
+**Next**: which feature to pick next, and why. If a blocker exists (waiting on a
+        user decision, an external dependency), state it explicitly.
+
+---
+-->
