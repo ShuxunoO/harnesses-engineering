@@ -129,6 +129,12 @@ Common misuses to flag: rewriting tool returns to mislead the model in `PostTool
 
 ---
 
+### H. Writing or modifying code in the project
+
+Follow `references/code-style.md`: every function gets an in-body Chinese Doxygen-style docstring (`@brief` one-liner, `@details` with a numbered `Logic:`, `@param <name> <type>: <business meaning>`, `@return`), inline comments reserved for *why* (key business decisions, non-obvious logic, risk points) — never restating code. A consistent, self-documenting codebase is what lets a later agent instance read a file at a glance in a fresh context window; treat it as part of the harness, not cosmetics.
+
+---
+
 ## Anti-pattern signals (interrupt the conversation when seen)
 
 Pull the matching entry from `references/anti-patterns.md` and quote it back to the user.
@@ -169,6 +175,7 @@ Load on demand; reading these in full upfront is unnecessary.
 - `references/anti-patterns.md` — recognition signals plus a one-paragraph fix for each pattern (quote directly to the user).
 - `references/evaluation.md` — the four-step evaluation method, test-set sourcing, regression strategy.
 - `references/sdk-cheatsheet.md` — Claude Agent SDK quick reference (tools, hooks, subagents, permissions, MCP).
+- `references/code-style.md` — 代码书写规范：函数内部 Doxygen 风格中文 docstring（`@brief`/`@details`/`@param`/`@return`）、行内注释要求、配套可读性约定与提交前自检清单。生成或修改代码时遵循此规范。
 
 ---
 
