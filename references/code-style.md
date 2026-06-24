@@ -1,16 +1,88 @@
 # 代码书写规范（Code Style）
 
-本规范定义在本项目（及由本 harness 生成 / 维护的代码）中如何书写**函数注释**、**行内注释**与相关的可读性约定。目标是产出**最规范、最易读、最易维护**的代码：任何人（包括未来的 Agent 实例）打开文件，不读实现也能在几秒内理解每个函数"做什么、吃什么、吐什么"。
+本规范定义在本项目（及由本 harness 生成 / 维护的代码）中如何书写**脚本头部说明**、**函数注释**、**行内注释**与相关的可读性约定。目标是产出**最规范、最易读、最易维护**的代码：任何人（包括未来的 Agent 实例）打开文件，不读实现也能在几秒内理解每个脚本"做什么、依赖什么、产出什么"，理解每个函数"做什么、吃什么、吐什么"。
 
 > 与本 skill 的关系：自我可验证（principle 5）和增量推进（principle 6）都依赖代码能被快速读懂。一致的注释规范让后续 Agent 实例在新的 context window 中"看一眼就懂"，是降低长程任务认知成本的基础设施。
 
 ---
 
-## 1. 函数注释规范
+## 1. 脚本头部说明
+
+每个**独立运行**的脚本文件开头必须包含 Doxygen 风格文件说明，用于快速理解脚本用途、输入输出和运行约束。一次性的小工具脚本可以略去 `@version` 等元信息，但 `@brief` 与 `@details` 不能省。
+
+### 1.1 标准格式
+
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+##
+# @file script_name.py
+# @brief 一句话说明脚本核心功能。
+# @details
+# 详细说明脚本工作逻辑：
+#   1. 读取哪些数据源；
+#   2. 执行哪些核心处理；
+#   3. 写入哪些数据库 schema / table 或输出文件；
+#   4. 有哪些过滤条件、增量规则或特殊注意事项。
+#
+# @author 作者或维护者
+# @date YYYY-MM-DD
+# @version 版本号
+# @note 依赖库、运行环境或外部服务说明
+# @attention 重要运行注意事项
+#
+```
+
+### 1.2 各标签要求
+
+| 标签 | 是否必填 | 要求 |
+|---|---|---|
+| `@file` | 必填 | 与文件名一致，便于跨文件搜索与剪贴板复制时定位。 |
+| `@brief` | 必填 | **一句话**说明脚本核心功能，动词开头。 |
+| `@details` | 必填 | 用编号列表描述：①数据源 ②核心处理 ③输出目标（schema/table/文件）④过滤条件、增量规则、特殊约束。 |
+| `@author` | 推荐 | 作者或当前维护者，方便追问。 |
+| `@date` | 推荐 | 文件首次创建日期（`YYYY-MM-DD`）。修改不必每次更新——以 git 历史为准。 |
+| `@version` | 可选 | 版本号；对长期演进的脚本建议保留。 |
+| `@note` | 推荐 | 依赖库、运行环境（如 conda 环境名）、外部服务（API、DB、消息队列）。 |
+| `@attention` | 关键时必填 | 运行风险、不可重入、需先备份、写真实库等**必须看到**的事项。 |
+
+### 1.3 补充约定
+
+- 文件头**只**解释**整个脚本**，不要把单个函数的实现细节往上抬。
+- **不要**在每个函数上方再写一遍 `## / # @brief / # @param` 注释块。函数说明统一放在函数内部 docstring（见第 2 节）。
+- `@details` 中点名**真实的 schema、table、文件路径、外部 API**——名字本身就是 context。
+- 若脚本支持命令行参数，可在 `@details` 末尾追加一行 `Usage:` 列出常用调用示例。
+- 修改了脚本行为（新增数据源、改写入目标、改过滤逻辑），同步更新头部 `@details`；**过期文件头比没有更危险**。
+
+### 1.4 示例
+
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+##
+# @file get_tornadoCash_data_by_Alchemy.py
+# @brief 通过 Alchemy 采集 Tornado Cash 各 ETH 池的 deposit / withdraw 事件并入库。
+# @details
+# 1. 从 Alchemy JSON-RPC 拉取指定区块范围内的 Tornado Cash pool 合约事件；
+# 2. 解析 Deposit / Withdrawal 事件，提取存取款关键字段；
+# 3. 写入 PostgreSQL `one_piece` schema 下 `*_deposit_transfers` 与 `*_withdraw_transfers`；
+# 4. 仅入库 `receipt.status == 1` 的成功交易；通过 lookback + safe_confirmations 保证幂等增量。
+#
+# @author AML Team
+# @date 2026-05-12
+# @version 1.2.0
+# @note 依赖 Alchemy API（多 key 轮询见 config.get_next_alchemy_base_url）、PostgreSQL 14+。
+# @attention 写入生产 schema；运行前确认 `--from-block` / `--to-block` 范围；首次运行需 `--init-db-only`。
+#
+```
+
+---
+
+## 2. 函数注释规范
 
 函数**必须**使用函数内部 docstring，采用**中文 Doxygen 风格**。注释写在函数体内部第一行（紧跟 `def` 之后），**不要**在函数上方再重复同样的注释。
 
-### 1.1 标准格式
+### 2.1 标准格式
 
 ```python
 def filter_clues_by_keywords(key_word_list):
@@ -30,7 +102,7 @@ def filter_clues_by_keywords(key_word_list):
     """
 ```
 
-### 1.2 各标签要求
+### 2.2 各标签要求
 
 | 标签 | 是否必填 | 要求 |
 |---|---|---|
@@ -40,14 +112,14 @@ def filter_clues_by_keywords(key_word_list):
 | `@return` | 有返回值时必填 | 格式 `@return <类型>: <含义>`。无返回值可省略或写 `@return None`。 |
 | `@raises` | 有显式抛出时推荐 | 格式 `@raises <异常类型>: <触发条件>`。 |
 
-### 1.3 补充约定
+### 2.3 补充约定
 
 - **关键异常或特殊跳过逻辑**在 `@details` 中说明（例如"地址为空时跳过该条记录"）。
 - `@param` 的"业务含义"要落到**领域语义**，而不是复述变量名。反例：`@param user_id int: 用户ID`；正例：`@param user_id int: 发起本次结算的用户主键，用于关联 wallet 表`。
 - `Logic:` 步骤里出现的**表名、字段名、外部系统名**直接写真实名称——名字本身就是 context，能让读者免去翻代码。
 - docstring 写完即代表"契约"。**改了函数行为，必须同步改 docstring**；过期注释比没有注释更危险。
 
-### 1.4 无参数 / 简单函数
+### 2.4 无参数 / 简单函数
 
 无参数时省略 `@param`；纯副作用函数用 `@return None`。即便函数很短，`@brief` 仍必填——简短不等于自解释。
 
@@ -62,16 +134,22 @@ def reset_verify_status():
 
 ---
 
-## 2. 行内注释要求
+## 3. 行内注释要求
 
-行内注释**只用于**解释以下三类内容：
+行内注释**只用于**解释以下几类内容：
 
 1. **关键业务判断** —— 为什么这里要这样分支（业务规则，而非代码字面意思）。
 2. **非显然逻辑** —— 算法技巧、边界处理、与直觉相悖的写法。
 3. **风险点** —— 已知的坑、临时方案、依赖外部约定的脆弱处。
-4. **关键代码** —— 关键难懂逻辑的必要解释
+4. **关键代码** —— 关键难懂逻辑的必要解释。
+
+### 推荐
 
 ```python
+# 失败交易不入库，避免把 reverted withdraw 误认为真实取款。
+if status != 1:
+    return None
+
 # third_party_address 为空代表非代付场景，直接跳过，避免误判为可疑线索
 if not row.third_party_address:
     continue
@@ -81,9 +159,12 @@ if amount == ZERO:
     ...
 ```
 
-### 反例（不要写）
+### 避免（反例）
 
 ```python
+# 给变量赋值
+value = 1
+
 i = i + 1          # i 加 1            ← 复述代码，零信息
 users = []         # 初始化 users 列表  ← 复述代码
 ```
@@ -92,7 +173,7 @@ users = []         # 初始化 users 列表  ← 复述代码
 
 ---
 
-## 3. 配套可读性约定
+## 4. 配套可读性约定
 
 注释规范之外，以下约定共同支撑"易读易维护"：
 
@@ -105,12 +186,14 @@ users = []         # 初始化 users 列表  ← 复述代码
 
 ---
 
-## 4. 自检清单（提交前）
+## 5. 自检清单（提交前）
 
+- [ ] 独立运行脚本的文件头部具备 `@file`、`@brief`、`@details`；关键脚本还有 `@note` / `@attention`。
+- [ ] `@details` 已说明：①数据源 ②核心处理 ③写入目标（schema/table/文件）④特殊约束（增量规则、过滤条件）。
 - [ ] 每个函数都有函数内部 docstring，`@brief` 是一句话。
 - [ ] 有参数的函数，每个 `@param` 都写了**类型 + 业务含义**。
 - [ ] 有返回值的写了 `@return`；纯副作用写 `@return None`。
 - [ ] `@details` 的 `Logic:` 步骤覆盖核心流程，并说明关键异常 / 跳过逻辑。
 - [ ] 行内注释只剩"为什么"，没有复述代码的噪音。
-- [ ] 改过行为的函数，docstring 已同步更新。
-- [ ] 函数上方没有与内部 docstring 重复的注释。
+- [ ] 改过行为的脚本 / 函数，文件头与 docstring 已同步更新。
+- [ ] 函数上方没有与内部 docstring 重复的注释块。
